@@ -5,20 +5,21 @@
 */
 
 /* Initialize */
-const width = 800;
+const width = 1200;
 const height = width;
+//const height = 1080;
 const maxIters = 1000;
 const R = 2;
 const n = 2;
-const cX = -0.8; // real axis
-const cY = 0.156; // imaginary axis
+const cX = -0.835; // real axis
+const cY = 0.321; // imaginary axis
 
 function setup() {
   createCanvas(width, height);
   colorMode(HSB, 360, 100, 100, 100);
   noLoop();
 
-  background(0.0, 0.0, 90.0, 100.0);
+  //background(0.0, 0.0, 90.0, 100.0);
   noStroke();
   
   for (let x = 0; x < width; x++) {
@@ -28,7 +29,7 @@ function setup() {
 
       let epoch = 0;
 
-      while (((pow(zX, 2) + pow(zY, 2)) < pow(R, 2)) && epoch <= maxIters) {
+      while ((pow(zX, 2) + pow(zY, 2) < pow(R, 2)) && epoch < maxIters) {
         let xTmp = pow(pow(zX, 2) + pow(zY, 2), n / 2) * cos(n * atan2(zY, zX)) + cX;
         zY = pow(pow(zX, 2) + pow(zY, 2), n / 2) * sin(n * atan2(zY, zX)) + cY;
         zX = xTmp;
@@ -36,14 +37,30 @@ function setup() {
         epoch += 1;
       }
       
-      // draw
-      let nParam = map(epoch, 0, maxIters, 0.0, 1.0);
-      let hueVal = noise(100.0, nParam * 50.0) * 240.0;
+      // Renormalization to reduce colour banding
+      let absZ = pow(zX, 2) + pow(zY, 2);
+      absZ = max(absZ, 1e-12); // Prevent log(0) errors
+      let colorValue = epoch + 1 - log(log(absZ)) / log(n);
+      
+      // Normalize to noise(0-1)
+      let nParam = map(colorValue, 0, maxIters, 0.0, 1.0);
+
+      // draw - sets pixel colour directly (faster than rect)
+      // Constrainting colour
+      let hueMin = 180;
+      let hueMax = 240;
+      let noiseVal = noise(100.0, nParam * 50.0);
+      let hueVal = map(noiseVal, 0, 1, hueMin, hueMax);
+      // let hueVal = map(colorValue, 0, maxIters, 0, 360) % 360;
       let satVal = 90.0;
       let briVal = 30.0;
       let alpVal = noise(200.0, nParam * 20.0) * 100.0;
-      fill(hueVal % 360.0, satVal, briVal, alpVal);
-      rect(x, y, 1.0, 1.0);
+
+      // Create HSB color object
+      let col = color(hueVal, satVal, briVal, alpVal);
+      set(x, y, col);
     }
   }
+  
+  updatePixels(); 
 }
